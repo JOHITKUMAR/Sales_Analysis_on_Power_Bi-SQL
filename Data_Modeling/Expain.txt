@@ -1,0 +1,22 @@
+This screenshot shows the Power BI data model view for the Retail Sales Analysis project, illustrating how all six tables are connected through relationships in a hybrid star-and-snowflake schema, with FactSales sitting at the center as the central fact table.
+FactSales — The Core Fact Table
+Positioned in the middle of the canvas, FactSales contains the transactional backbone of the model, including fields like Date, DimGeography.GeoKey, fSalesPrimaryKey, PercentOfStandardCost, ProductID, and RevenueDiscount. This table is the busiest node in the diagram, with relationship lines radiating outward to four different dimension tables, confirming its role as the single source of truth for all sales transactions.
+Star Schema Connections
+Four dimension tables connect directly to FactSales in a classic star pattern, each with a "1" on the dimension side and a "*" (many) on the fact side, indicating one-to-many relationships:
+
+DimSalesRep (top center) connects via SalesRepID, holding Sales Rep Name and SalesRepID. This link allows every sales transaction to be traced back to the representative who made it, supporting the "Top Sales Representatives" analysis.
+DimGeography (top right) connects via GeoKey, containing Country, GeoKey, and Town. This is the surrogate key created during the web-scraping cleanup step, enabling location-based filtering without storing redundant text in the fact table.
+DimProducts (bottom center) connects via ProductID, with attributes like Color, ProductID, ProductName, RetailPrice, StandardCost, and SubCategoryKey. This table feeds the revenue and cost calculations since pricing and cost data are pulled into FactSales using RELATED().
+CalendarMaster (bottom right) connects via Date, containing Date, Month Name, Month Number, Quarter, and Week Number. This is the dedicated date table built using the CALENDAR() DAX function, essential for enabling accurate time-intelligence calculations like MoM and QoQ growth.
+
+Snowflake Arm — Category Hierarchy
+Unlike the four tables above, DimCategory does not connect directly to FactSales. Instead, it flows through a chain on the left side of the diagram: DimCategory → DimSubcategories → DimProducts → FactSales. This creates the snowflake portion of the schema:
+
+DimCategory (top left) holds CategoryKey and CategoryName, and relates one-to-many down to DimSubcategories via CategoryKey.
+DimSubcategories (middle left) contains CategoryKey, SubCategory Name, and SubCategoryKey, and relates one-to-many into DimProducts via SubCategoryKey.
+
+This indirect path means category-level filtering propagates downward through subcategories, into products, and finally into the fact table — which is why cleaning the SubCategoryKey field (originally formatted as inconsistent text like "ID -1") was a critical step; without it, this entire filtering chain would have broken.
+Visual Relationship Indicators
+Each relationship line in the diagram displays directional arrows and cardinality markers ("1" near dimension tables, "*" near the fact table), visually confirming single-direction, one-to-many relationships throughout. This consistent design prevents ambiguous filter propagation and ensures the model behaves predictably when slicers and visuals are applied in the report.
+Overall Structure
+Altogether, the diagram visually confirms six relationships forming a clean, well-organized hybrid model. The four-pronged star (SalesRep, Geography, Products, Calendar) provides fast, direct filtering for most report visuals, while the snowflake arm (Category → SubCategory → Products) supports deeper hierarchical analysis without duplicating data into the fact table. This layout balances simplicity for performance with depth for category-level drill-down analysis.
